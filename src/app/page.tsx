@@ -5,7 +5,8 @@ import dynamic from 'next/dynamic';
 import { 
   Shield, Search, X, Radio, Tv, Plus, Minus, 
   Navigation, Eye, EyeOff, User, Lock,
-  Wind, Thermometer, Droplets, Gauge, Eye as VisibilityIcon, Activity, RefreshCw, AlertTriangle
+  Wind, Thermometer, Droplets, Gauge, Activity, RefreshCw, AlertTriangle,
+  Volume2, VolumeX, Music
 } from 'lucide-react';
 
 const Globe = dynamic(() => import('react-globe.gl'), { 
@@ -25,16 +26,18 @@ const VIDEOS = ["QaWWdg5qrdg", "KNUKou0gFxE", "9yOfV6Eh464", "tN5v5eiL2zY", "M7l
 
 export default function Home() {
   const globeRef = useRef<any>(null);
+  const playerRef = useRef<any>(null); // Ref for YouTube Player
   const [details, setDetails] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [activeZones, setActiveZones] = useState<any[]>(INITIAL_ZONES);
   
-  // Auth States
+  // Auth & Audio States
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
 
   const API_KEY = "73a55a8803d65934551e3d5552156b1d";
 
@@ -45,15 +48,28 @@ export default function Home() {
     }
   }, [isAuthenticated]);
 
+  // Handle YouTube Background Music
+  const toggleAudio = () => {
+    if (playerRef.current) {
+      if (isMuted) {
+        playerRef.current.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+        playerRef.current.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+        setIsMuted(false);
+      } else {
+        playerRef.current.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+        setIsMuted(true);
+      }
+    }
+  };
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // STRICT AUTHENTICATION CHECK
     if (username === "ELITE" && password === "1234") {
       setIsAuthenticated(true);
       setAuthError(false);
     } else {
       setAuthError(true);
-      setTimeout(() => setAuthError(false), 1000); // Reset shake
+      setTimeout(() => setAuthError(false), 1000);
     }
   };
 
@@ -95,56 +111,20 @@ export default function Home() {
   if (!isAuthenticated) {
     return (
       <div className="h-screen w-full bg-[#020617] flex items-center justify-center font-mono relative overflow-hidden">
-        {/* Background Grid for Auth */}
         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#10b981 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
-        
-        <form 
-          onSubmit={handleLogin} 
-          className={`w-full max-w-md p-10 bg-slate-950/80 backdrop-blur-xl border ${authError ? 'border-red-500 animate-shake' : 'border-emerald-500/20'} rounded-[3rem] shadow-2xl transition-colors duration-300 z-50`}
-        >
+        <form onSubmit={handleLogin} className={`w-full max-w-md p-10 bg-slate-950/80 backdrop-blur-xl border ${authError ? 'border-red-500 animate-shake' : 'border-emerald-500/20'} rounded-[3rem] shadow-2xl z-50`}>
           <div className="text-center">
             <Shield className={`${authError ? 'text-red-500' : 'text-emerald-500'} mx-auto mb-6 ${!authError && 'animate-pulse'}`} size={48} />
             <h2 className="text-xl font-black text-white uppercase tracking-[0.3em] mb-2">Secure Uplink</h2>
             <p className="text-[10px] text-slate-500 mb-8 uppercase tracking-widest">Awaiting Authorization...</p>
           </div>
-
           <div className="space-y-4">
+            <input required type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="OPERATOR_ID" className="w-full bg-black/50 border border-white/10 rounded-2xl py-4 px-6 text-xs text-white outline-none focus:border-emerald-500 uppercase" />
             <div className="relative">
-              <User className="absolute left-4 top-4 text-slate-600" size={16} />
-              <input 
-                required 
-                type="text" 
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="OPERATOR_ID" 
-                className="w-full bg-black/50 border border-white/10 rounded-2xl py-4 px-12 text-xs text-white outline-none focus:border-emerald-500 uppercase transition-all placeholder:text-slate-700" 
-              />
+              <input required type={showPass ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="ACCESS_KEY" className="w-full bg-black/50 border border-white/10 rounded-2xl py-4 px-6 text-xs text-white outline-none focus:border-emerald-500" />
+              <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-4 text-slate-500">{showPass ? <EyeOff size={18}/> : <Eye size={18}/>}</button>
             </div>
-            
-            <div className="relative">
-              <Lock className="absolute left-4 top-4 text-slate-600" size={16} />
-              <input 
-                required 
-                type={showPass ? "text" : "password"} 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="ACCESS_KEY" 
-                className="w-full bg-black/50 border border-white/10 rounded-2xl py-4 px-12 text-xs text-white outline-none focus:border-emerald-500 transition-all placeholder:text-slate-700" 
-              />
-              <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-4 text-slate-500 hover:text-white">
-                {showPass ? <EyeOff size={18}/> : <Eye size={18}/>}
-              </button>
-            </div>
-
-            {authError && (
-              <div className="flex items-center gap-2 justify-center text-red-500 text-[9px] font-black uppercase tracking-widest animate-fade-in">
-                <AlertTriangle size={12} /> Access Denied: Invalid Credentials
-              </div>
-            )}
-
-            <button type="submit" className="w-full bg-emerald-500 text-slate-950 font-black py-5 rounded-2xl text-[10px] uppercase tracking-[0.4em] hover:bg-emerald-400 active:scale-95 transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-              Establish Connection
-            </button>
+            <button type="submit" className="w-full bg-emerald-500 text-slate-950 font-black py-5 rounded-2xl text-[10px] uppercase tracking-[0.4em] hover:bg-emerald-400">Establish Connection</button>
           </div>
         </form>
       </div>
@@ -153,24 +133,49 @@ export default function Home() {
 
   return (
     <main className="h-screen bg-black text-slate-300 font-mono flex flex-col overflow-hidden">
+      
+      {/* HIDDEN TACTICAL AUDIO PLAYER (YouTube k39oVsZqyDQ) */}
+      <iframe
+        ref={playerRef}
+        className="hidden"
+        src="https://www.youtube.com/embed/k39oVsZqyDQ?enablejsapi=1&autoplay=0&mute=1&loop=1&playlist=k39oVsZqyDQ"
+        allow="autoplay"
+      />
+
       <nav className="z-[100] h-20 flex items-center justify-between px-10 border-b border-white/5 bg-black/80 backdrop-blur-xl">
         <div className="flex items-center gap-4">
           <Shield className="text-emerald-500" size={24} />
           <h1 className="text-xs font-black uppercase tracking-[0.5em]">Elite X Monitor <span className="text-[8px] bg-emerald-500/10 px-2 py-1 rounded ml-2 text-emerald-400">OP: {username}</span></h1>
         </div>
+        
         <form onSubmit={handleSearch} className="relative w-full max-w-lg">
           <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="SEARCH PLANETARY GRID..." className="w-full bg-white/[0.05] border border-white/10 rounded-full py-3 px-12 text-[10px] uppercase tracking-widest outline-none focus:border-emerald-500 transition-all" />
           <Search className="absolute left-4 top-3 text-slate-500" size={16} />
         </form>
-        <div className="flex gap-4">
-          <button onClick={resetGrid} className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-500 rounded-xl border border-emerald-500/20 hover:bg-emerald-500 hover:text-black transition-all text-[10px] font-black uppercase tracking-widest"><RefreshCw size={14}/> Reset Grid</button>
-          <button onClick={() => { setIsAuthenticated(false); setUsername(""); setPassword(""); }} className="p-2 bg-red-500/10 text-red-500 rounded-lg border border-red-500/20 hover:bg-red-500 hover:text-white"><X size={18}/></button>
+
+        <div className="flex gap-4 items-center">
+          {/* AUDIO CONTROLLER */}
+          <button 
+            onClick={toggleAudio} 
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all text-[10px] font-black uppercase tracking-widest ${!isMuted ? 'bg-emerald-500/20 border-emerald-500 text-emerald-500 animate-pulse' : 'bg-white/5 border-white/10 text-slate-500'}`}
+          >
+            {!isMuted ? <Volume2 size={14}/> : <VolumeX size={14}/>} 
+            {!isMuted ? 'Uplink Live' : 'Uplink Muted'}
+          </button>
+
+          <button onClick={resetGrid} className="px-4 py-2 bg-emerald-500/10 text-emerald-500 rounded-xl border border-emerald-500/20 hover:bg-emerald-500 hover:text-black transition-all text-[10px] font-black uppercase tracking-widest"><RefreshCw size={14}/></button>
+          <button onClick={() => { setIsAuthenticated(false); setUsername(""); setPassword(""); setIsMuted(true); }} className="p-2 bg-red-500/10 text-red-500 rounded-lg border border-red-500/20 hover:bg-red-500 hover:text-white"><X size={18}/></button>
         </div>
       </nav>
 
       <div className="flex-1 flex overflow-hidden relative">
         <aside className="w-[300px] flex flex-col border-r border-white/5 bg-black/40 backdrop-blur-md z-50">
-          <div className="p-8 border-b border-white/5 text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-3"><Radio size={16} className="animate-pulse" /> Active Sectors</div>
+          <div className="p-8 border-b border-white/5 text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-3">
+            <Music size={16} className={!isMuted ? 'animate-spin' : ''} /> Operation Audio
+          </div>
+          <div className="p-6 text-[10px] text-slate-500 leading-relaxed uppercase tracking-tighter">
+            Target audio synced: "k39oVsZqyDQ". Background frequency loop active for mission immersion.
+          </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
             {activeZones.map((z, i) => (
               <button key={i} onClick={() => triggerAlert(z)} className="w-full text-left p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-emerald-500/40 transition-all group">
@@ -183,7 +188,6 @@ export default function Home() {
 
         <div className="flex-1 relative flex items-center justify-center">
           <div className="absolute inset-0 bg-radial-vignette pointer-events-none z-10" />
-          
           <Globe
             ref={globeRef}
             globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
@@ -201,7 +205,6 @@ export default function Home() {
                       <circle cx="12" cy="10" r="3" fill="black"></circle>
                     </svg>
                   </div>
-                  
                   ${isSelected ? `
                     <div class="globe-popup-card">
                       <div class="scan-bar"></div>
@@ -223,7 +226,6 @@ export default function Home() {
             }}
           />
 
-          {/* VIDEO GRID */}
           <div className="absolute bottom-6 left-0 right-0 h-48 z-[60] group/video-container">
             <div className="absolute inset-y-0 left-0 w-48 bg-gradient-to-r from-black via-black/80 to-transparent z-20 pointer-events-none" />
             <div className="absolute inset-y-0 right-0 w-48 bg-gradient-to-l from-black via-black/80 to-transparent z-20 pointer-events-none" />
@@ -245,15 +247,7 @@ export default function Home() {
       </div>
 
       <style jsx global>{`
-        /* AUTH ANIMATIONS */
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-10px); }
-          75% { transform: translateX(10px); }
-        }
-        .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }
-        
-        /* UI ELEMENTS */
+        /* PIN & UI ANIMATIONS */
         .pointer-wrapper { position: relative; display: flex; align-items: center; justify-content: center; width: 150px; height: 150px; cursor: pointer; }
         .bouncing-pin { z-index: 10; filter: drop-shadow(0 0 15px #10b981); animation: pinBounce 1.5s infinite ease-in-out; }
         .radar-ripple { position: absolute; width: 60px; height: 60px; border-radius: 50%; border: 2px solid #10b981; opacity: 0; animation: radarExpand 3s infinite; }
@@ -268,7 +262,6 @@ export default function Home() {
         .grid-item span { font-size: 7px; color: #475569; display: block; font-weight: 800; }
         .grid-item p { font-size: 11px; font-weight: 900; color: #10b981; }
         .city { font-size: 13px; font-weight: 900; color: #fff; margin-bottom: 5px; display: block; letter-spacing: 0.1em; }
-        .mini-label { position: absolute; bottom: 20px; font-size: 8px; color: #10b981; font-weight: 900; background: black/40; padding: 2px 6px; border-radius: 4px; }
 
         /* VIDEO SCROLL */
         @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(calc(-100% / 4)); } }
@@ -284,8 +277,6 @@ export default function Home() {
 
         .custom-scrollbar-h::-webkit-scrollbar { height: 6px; }
         .custom-scrollbar-h::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.2); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.4); }
       `}</style>
     </main>
   );
