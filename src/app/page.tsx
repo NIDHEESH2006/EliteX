@@ -138,7 +138,7 @@ export default function Home() {
       <iframe
         ref={playerRef}
         className="hidden"
-        src="https://www.youtube.com/embed/k39oVsZqyDQ?enablejsapi=1&autoplay=0&mute=1&loop=1&playlist=k39oVsZqyDQ"
+        src="https://youtu.be/5gO0xpY_Y3E?si=y6wNlEy15gtmcr-t"
         allow="autoplay"
       />
 
